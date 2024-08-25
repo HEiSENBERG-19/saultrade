@@ -1,0 +1,7 @@
+__pycache__
+logs/my_app.log
+logs/pnl.log
+logs/positions.log
+logs/ws_logs.log
+redis/dump.rdb
+saul

@@ -1,0 +1,15 @@
+"user": "FA324706"
+"pwd": "Shoonya@1819"
+"vc": "FA324706_U"
+"app_key": "1ace587d772ffa46ca73053d0a051c48"
+"imei": "abc1234"
+"secret": "7E5YER64Y5VE257GY7D265X6472CLICK"
+redis:
+  host: localhost
+  port: 6379
+
+influxdb:
+  url: "http://localhost:8086"
+  token: "vvYwJIrzq9vkWTbh_-WgdBsD_OOJ6_5QBhrO8ATrdvaC8_LRSpHgld7gbuIMD2TArjg5pi9D1nrWvBkYCDx9yg=="
+  org: "myorg"
+  bucket: "mybuk"

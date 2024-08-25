@@ -1,0 +1,22 @@
+# Timing
+login_time: '09:00:00'
+start_time: '09:15:00'
+
+# Underlying Asset
+tsymbol: 'FINNIFTY'
+exchange: 'NFO'
+
+# Order Parameters
+quantity: 1  # Will be adjusted based on lot size
+use_margin_based_quantity: false  # Set to false to use fixed quantity only
+
+# Option Selection Parameters
+sotm_points: 0
+botm_points: 0
+bias_points: 0
+
+# Additional Strategy Parameters
+max_retries: 0
+retry_delay: 3
+stop_loss_percentage: 30  # For 30% stop loss 
+max_allowed_margin: 5000000
