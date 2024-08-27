@@ -7,7 +7,7 @@ tsymbol: 'FINNIFTY'
 exchange: 'NFO'
 
 # Order Parameters
-quantity: 1  # Will be adjusted based on lot size
+quantity: 4  # Will be adjusted based on lot size
 use_margin_based_quantity: false  # Set to false to use fixed quantity only
 
 # Option Selection Parameters
@@ -16,7 +16,5 @@ botm_points: 0
 bias_points: 0
 
 # Additional Strategy Parameters
-max_retries: 0
-retry_delay: 3
-stop_loss_percentage: 30  # For 30% stop loss 
+stop_loss_percentage: 1  # For 30% stop loss 
 max_allowed_margin: 5000000

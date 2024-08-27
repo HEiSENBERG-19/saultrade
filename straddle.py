@@ -11,21 +11,16 @@ class Straddle:
         self.position_manager = position_manager
         self.order_execution_engine = order_execution_engine
         self.margin_calculator = margin_calculator
-        self.max_retries = self.config.get_rule('max_retries')
-        self.retry_delay = self.config.get_rule('retry_delay')
+        self.stop_loss_percentage = self.config.get_rule('stop_loss_percentage') / 100
 
     async def setup(self):
-        atm_strike = await self._get_atm_strike()
-        if not atm_strike:
-            return None, None, 0
-
-        option_symbols = await self._get_option_symbols(atm_strike)
+        option_symbols, atm_strike = await self._get_option_symbols()
         if not option_symbols:
-            return None, None, 0
+            return None, None, 0, None
 
         final_quantity = await self._calculate_final_quantity(option_symbols)
         if final_quantity <= 0:
-            return None, None, 0
+            return None, None, 0, None
 
         final_margin, final_trade_margin = await self._calculate_margin(option_symbols, final_quantity)
         
@@ -33,9 +28,9 @@ class Straddle:
         
         await asyncio.sleep(1)
 
-        return option_symbols, final_quantity, final_trade_margin
+        return option_symbols, final_quantity, final_trade_margin, atm_strike
 
-    async def execute(self, option_symbols, final_quantity):
+    async def execute(self, option_symbols, final_quantity, atm_strike):
         initial_order_details = await self.place_initial_orders(option_symbols, final_quantity)
         stop_loss_orders = await self.place_stop_loss_orders(initial_order_details, final_quantity)
 
@@ -47,7 +42,7 @@ class Straddle:
 
         await self.unsubscribe_from_symbols(option_symbols)
 
-    async def _get_atm_strike(self):
+    async def _get_option_symbols(self):
         try:
             atm_strike = await get_atm_strike(
                 self.config.get_rule('tsymbol'), 
@@ -55,14 +50,8 @@ class Straddle:
             )
             if not atm_strike:
                 app_logger.error("Failed to get ATM strike. Aborting simulation.")
-                return None
-            return atm_strike
-        except Exception as e:
-            app_logger.error(f"Error getting ATM strike: {e}")
-            return None
-
-    async def _get_option_symbols(self, atm_strike):
-        try:
+                return None, None
+            
             strikes = {
                 'sce': (atm_strike + self.config.get_rule('sotm_points') + self.config.get_rule('bias_points'), 'CE'),
                 'spe': (atm_strike - self.config.get_rule('sotm_points') + self.config.get_rule('bias_points'), 'PE'),
@@ -70,11 +59,11 @@ class Straddle:
             option_symbols = await get_option_symbols(self.config.get_rule('tsymbol'), strikes)
             if not option_symbols:
                 app_logger.error("Failed to get option symbols. Aborting simulation.")
-                return None
-            return option_symbols
+                return None, None
+            return option_symbols, atm_strike
         except Exception as e:
             app_logger.error(f"Error getting option symbols: {e}")
-            return None
+            return None, None
 
     async def subscribe_to_symbols(self, option_symbols):
         for symbol in option_symbols.values():
@@ -82,7 +71,7 @@ class Straddle:
 
     async def unsubscribe_from_symbols(self, option_symbols):
         for symbol in option_symbols.values():
-            self.websocket_manager.unsubscribe_symbol(symbol['Exchange'], symbol['Token'], symbol['TradingSymbol'])
+            await self.websocket_manager.unsubscribe_symbol(symbol['Exchange'], symbol['Token'], symbol['TradingSymbol'])
 
     async def _calculate_final_quantity(self, option_symbols):
         final_quantity = int(adjust_quantity_for_lot_size(self.config.get_rule('quantity'), option_symbols['sce']['LotSize']))
@@ -124,8 +113,7 @@ class Straddle:
     async def place_stop_loss_orders(self, initial_order_details, final_quantity):
         stop_loss_orders = []
         for order_detail in initial_order_details:
-            sl_percent = 0.3
-            sl_price = round(order_detail['executed_price'] * (1 + sl_percent), 2)
+            sl_price = round(order_detail['executed_price'] * (1 + self.stop_loss_percentage), 2)
             
             sl_order = {
                 'symbol': order_detail['symbol'],
@@ -142,11 +130,9 @@ class Straddle:
                     'sl_order_id': sl_order_response['order_id'],
                     'sl_price': sl_price
                 })
-        return stop_loss_orders  
+        return stop_loss_orders
 
     async def monitor_positions_and_stop_loss(self, stop_loss_orders, option_symbols, final_quantity):
-        retries = {symbol['TradingSymbol']: 0 for symbol in option_symbols.values()}
-
         while True:
             positions = await self.position_manager.get_all_positions()
             
@@ -174,59 +160,6 @@ class Straddle:
                                     stop_loss_orders.remove(sl_order)
                                     del self.position_manager.positions[symbol]
                                     pos_logger.info(f"Position closed for {symbol} at {current_price}")
-                                    
-                                    # Attempt to re-enter the position
-                                    if retries[symbol] < self.max_retries:
-                                        await self.retry_position(symbol, final_quantity, stop_loss_orders)
-                                        retries[symbol] += 1
-                                    else:
-                                        app_logger.info(f"Max retries reached for {symbol}. Not re-entering.")
                                     break
 
             await asyncio.sleep(1)
-    
-    async def retry_position(self, symbol, quantity, stop_loss_orders):
-        app_logger.info(f"Attempting to re-enter position for {symbol}")
-        
-        # Wait for a specified delay before re-entering
-        await asyncio.sleep(self.retry_delay)
-        
-        # Place a new market order
-        order = {
-            'symbol': symbol,
-            'direction': 'S',
-            'quantity': quantity,
-            'order_type': 'MKT'
-        }
-        order_response = await self.order_execution_engine.place_order(order)
-        
-        if order_response:
-            order_id = order_response['order_id']
-            executed_price = order_response['price']
-            
-            await self.position_manager.add_position(symbol, quantity, executed_price)
-            pos_logger.info(f"Position re-opened for {symbol} at {executed_price}")
-            
-            # Place a new stop-loss order
-            sl_percent = 0.3  # You might want to adjust this or make it configurable
-            sl_price = round(executed_price * (1 + sl_percent), 2)
-            
-            sl_order = {
-                'symbol': symbol,
-                'direction': 'B',
-                'quantity': quantity,
-                'order_type': 'SL-M',
-                'trigger_price': sl_price,
-                'parent_order_id': order_id
-            }
-            sl_order_response = await self.order_execution_engine.place_order(sl_order)
-            
-            if sl_order_response:
-                stop_loss_orders.append({
-                    'symbol': symbol,
-                    'sl_order_id': sl_order_response['order_id'],
-                    'sl_price': sl_price
-                })
-                app_logger.info(f"New stop-loss placed for {symbol} at {sl_price}")
-        else:
-            app_logger.error(f"Failed to re-enter position for {symbol}")

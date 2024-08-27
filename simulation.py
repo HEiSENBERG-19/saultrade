@@ -44,7 +44,7 @@ class SimulationManager:
         await self.websocket_manager.close()
         await self.market_data_processor.close()
         await self.order_execution_engine.close()
-        await self.redis.close()
+        await self.redis.aclose()  # Changed to aclose()
 
     async def run(self):
         app_logger.info("Starting simulation.")
@@ -55,13 +55,13 @@ class SimulationManager:
         
         app_logger.info("WebSocket connected. Proceeding with simulation.")
 
-        option_symbols, final_quantity, final_trade_margin = await self.strategy.setup()
+        option_symbols, final_quantity, final_trade_margin, atm_strike = await self.strategy.setup()
         if not option_symbols or final_quantity <= 0:
             app_logger.error("Strategy setup failed. Aborting simulation.")
             await self.cleanup()
             return
 
-        await self.strategy.execute(option_symbols, final_quantity)
+        await self.strategy.execute(option_symbols, final_quantity, atm_strike)
 
         await self.cleanup()
 

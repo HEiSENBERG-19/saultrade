@@ -30,4 +30,4 @@ class Config:
         return self._config.get('influxdb', {})
 
     def get_simulation_duration(self) -> int:
-        return self._config.get('simulation_duration', 60)  # Default to 60 seconds
+        return self._config.get('simulation_duration', 60)
