@@ -120,14 +120,14 @@ async def get_option_symbols(tsymbol: str, strikes: dict) -> dict:
                 raise ValueError(f"No option found for {opt_key} with strike {strike} and type {option_type}")
             options[opt_key] = {
                 'Exchange': row.iloc[0]['Exchange'],
-                'Token': row.iloc[0]['Token'],
-                'LotSize': row.iloc[0]['LotSize'],
+                'Token': int(row.iloc[0]['Token']),
+                'LotSize': int(row.iloc[0]['LotSize']),
                 'Symbol': row.iloc[0]['Symbol'],
                 'TradingSymbol': row.iloc[0]['TradingSymbol'],
                 'Expiry': row.iloc[0]['Expiry'],
                 'Instrument': row.iloc[0]['Instrument'],
                 'OptionType': row.iloc[0]['OptionType'],
-                'StrikePrice': row.iloc[0]['StrikePrice']
+                'StrikePrice': float(row.iloc[0]['StrikePrice'])
             }
         
         app_logger.info(f"Symbols Obtained")

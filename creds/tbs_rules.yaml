@@ -3,18 +3,18 @@ login_time: '09:00:00'
 start_time: '09:15:00'
 
 # Underlying Asset
-tsymbol: 'FINNIFTY'
+tsymbol: 'BANKNIFTY'
 exchange: 'NFO'
 
 # Order Parameters
-quantity: 4  # Will be adjusted based on lot size
+quantity: 1  # Will be adjusted based on lot size
 use_margin_based_quantity: false  # Set to false to use fixed quantity only
 
 # Option Selection Parameters
 sotm_points: 0
-botm_points: 0
+botm_points: 500
 bias_points: 0
 
 # Additional Strategy Parameters
-stop_loss_percentage: 1  # For 30% stop loss 
+stop_loss_percentage: 30  # For 30% stop loss 
 max_allowed_margin: 5000000

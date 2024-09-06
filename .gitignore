@@ -5,3 +5,5 @@ logs/positions.log
 logs/ws_logs.log
 redis/dump.rdb
 saul
+cluade.txt
+option_analytics.py
