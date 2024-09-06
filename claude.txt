@@ -1,3 +1,17 @@
+creds/config.yaml
+redis:
+  host: localhost
+  port: 6379
+
+influxdb:
+  url: "http://localhost:8086"
+  token: "vvYwJIrzq9vkWTbh_-WgdBsD_OOJ6_5QBhrO8ATrdvaC8_LRSpHgld7gbuIMD2TArjg5pi9D1nrWvBkYCDx9yg=="
+  org: "myorg"
+  bucket: "mybuk"
+
+creds/tbs_rules.yaml
+...
+
 config.py
 import yaml
 import logging
