@@ -1,5 +1,6 @@
 import yaml
 import logging
+import os
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
@@ -10,6 +11,10 @@ class Config:
         self._rules: Dict[str, Any] = self._load_config(rules_file)
 
     def _load_config(self, file_path: str) -> Dict[str, Any]:
+        if not os.path.exists(file_path):
+            logger.error(f"Configuration file not found: {file_path}")
+            return {}
+
         try:
             with open(file_path, 'r') as file:
                 return yaml.safe_load(file)

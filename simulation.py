@@ -12,6 +12,7 @@ from utils import login
 from influxdb_manager import InfluxDBManager
 from margin_calculator import MarginCalculator
 from straddle import Straddle
+from dotenv import load_dotenv
 
 class SimulationManager:
     def __init__(self, config, api):
@@ -44,7 +45,7 @@ class SimulationManager:
         await self.websocket_manager.close()
         await self.market_data_processor.close()
         await self.order_execution_engine.close()
-        await self.redis.aclose()  # Changed to aclose()
+        await self.redis.aclose()
 
     async def run(self):
         app_logger.info("Starting simulation.")
@@ -87,8 +88,12 @@ async def main():
         start_redis_server(redis_dir),
         start_docker_compose()
     )
+
+    load_dotenv()
+    config_file = os.environ.get('CONFIG_FILE', '/home/heisenberg/saultrade/creds/config.yaml')
+    rules_file = os.environ.get('RULES_FILE', '/home/heisenberg/saultrade/creds/tbs_rules.yaml')
     
-    config = Config('/home/heisenberg/saultrade/creds/config.yaml', '/home/heisenberg/saultrade/creds/tbs_rules.yaml')
+    config = Config(config_file, rules_file)
     api = login(config)
     
     simulation = SimulationManager(config, api)

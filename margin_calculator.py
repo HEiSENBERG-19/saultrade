@@ -37,7 +37,7 @@ class MarginCalculator:
         position_list = []
         for key, symbol_data in option_symbols.items():
             pos = position()
-            pos.prd = 'I'  # Assuming NRML product type, change if needed
+            pos.prd = 'I'  
             pos.exch = symbol_data['Exchange']
             pos.instname = symbol_data['Instrument']
             pos.symname = symbol_data['Symbol']
