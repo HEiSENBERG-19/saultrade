@@ -4,12 +4,14 @@ import json
 from logger_setup import app_logger
 
 class MarketDataProcessor:
-    def __init__(self):
+    def __init__(self, config):
+        self.config = config
         self.redis = None
         self.token_symbol_map = {}
 
     async def connect(self):
-        self.redis = await aioredis.from_url("redis://localhost")
+        redis_config = self.config.get_redis_config()
+        self.redis = await aioredis.from_url(f"redis://{redis_config.get('host')}:{redis_config.get('port')}")
         asyncio.create_task(self.process_market_data())
 
     async def process_market_data(self):

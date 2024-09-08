@@ -10,6 +10,6 @@ redis:
 
 influxdb:
   url: "http://localhost:8086"
-  token: "vvYwJIrzq9vkWTbh_-WgdBsD_OOJ6_5QBhrO8ATrdvaC8_LRSpHgld7gbuIMD2TArjg5pi9D1nrWvBkYCDx9yg=="
+  token: "njS9K0BUzPGIY0uXQ8oYsKlhnbua7WDyy0Htvbpz8FZ7j7aRTmRF9DiAVe4dP5UNFy-d4TO7K8ZMnBYGokBnZQ=="
   org: "myorg"
   bucket: "mybuk"

@@ -15,9 +15,7 @@ class DatabaseManager:
     async def connect_redis(self) -> aioredis.Redis:
         try:
             redis_config = self.config.get_redis_config()
-            self.redis = await aioredis.from_url(
-                f"redis://{redis_config.get('host', 'localhost')}:{redis_config.get('port', 6379)}"
-            )
+            self.redis = await aioredis.from_url(f"redis://{redis_config.get('host')}:{redis_config.get('port')}")
             return self.redis
         except Exception as e:
             logger.error(f"Failed to connect to Redis: {e}", exc_info=True)

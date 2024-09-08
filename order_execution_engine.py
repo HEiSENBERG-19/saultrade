@@ -3,13 +3,15 @@ import json
 from logger_setup import app_logger
 
 class OrderExecutionEngine:
-    def __init__(self, market_data_processor, position_manager):
+    def __init__(self, market_data_processor, position_manager, config):
+        self.config = config
         self.redis = None
         self.market_data_processor = market_data_processor
         self.position_manager = position_manager
 
     async def connect(self):
-        self.redis = await aioredis.from_url("redis://localhost")
+        redis_config = self.config.get_redis_config()
+        self.redis = await aioredis.from_url(f"redis://{redis_config.get('host')}:{redis_config.get('port')}")
 
     async def place_order(self, order_details):
         order_id = await self.generate_order_id()

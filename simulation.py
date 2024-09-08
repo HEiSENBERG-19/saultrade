@@ -20,7 +20,7 @@ class SimulationManager:
         influxdb_config = self.config.get_influxdb_config()
         self.api = api
         self.websocket_manager = WebSocketManager(api)
-        self.market_data_processor = MarketDataProcessor()
+        self.market_data_processor = MarketDataProcessor(config)
         self.redis = None
         self.influxdb_manager = InfluxDBManager(
             url=influxdb_config.get('url'),
@@ -29,16 +29,17 @@ class SimulationManager:
             bucket=influxdb_config.get('bucket')
         )
         self.position_manager = PositionManager(self.market_data_processor, self.influxdb_manager)
-        self.order_execution_engine = OrderExecutionEngine(self.market_data_processor, self.position_manager)
+        self.order_execution_engine = OrderExecutionEngine(self.market_data_processor, self.position_manager, config)
         self.margin_calculator = MarginCalculator(api, config.get_config('user'))
         self.strategy = Straddle(config, api, self.websocket_manager, self.market_data_processor, 
-                                 self.position_manager, self.order_execution_engine, self.margin_calculator)
+                                 self.position_manager, self.order_execution_engine, self.margin_calculator)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
 
     async def setup(self):
         await self.websocket_manager.connect()
         await self.market_data_processor.connect()
         await self.order_execution_engine.connect()
-        self.redis = await aioredis.from_url("redis://localhost")
+        redis_config = self.config.get_redis_config()
+        self.redis = await aioredis.from_url(f"redis://{redis_config.get('host')}:{redis_config.get('port')}")
 
     async def cleanup(self):
         self.influxdb_manager.close()
