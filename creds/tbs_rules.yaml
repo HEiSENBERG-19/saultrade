@@ -3,8 +3,8 @@ login_time: '09:00:00'
 start_time: '09:15:00'
 
 # Underlying Asset
-tsymbol: 'MIDCPNIFTY'
-exchange: 'NFO'
+tsymbol: 'CRUDEOIL'
+exchange: 'MCX'
 
 # Order Parameters
 quantity: 1  # Will be adjusted based on lot size
