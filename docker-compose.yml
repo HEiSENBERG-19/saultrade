@@ -17,7 +17,7 @@ services:
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=myadmintoken
       - TZ=Asia/Kolkata
     volumes:
-      - influxdb_data:/var/lib/influxdb
+      - influxdb_data:/var/lib/influxdb2
 
   grafana:
     image: grafana/grafana:latest

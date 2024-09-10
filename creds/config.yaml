@@ -9,7 +9,7 @@ redis:
   port: 6379
 
 influxdb:
-  url: "http://influxdb:8086"
-  token: "PPwgmiljzj5dtoNPUK1CtuUCy5OTM08vn3NPk95w_z83u_dHyKg9m4yle1GIwlLeaJ0FgnZ3t8ekKNGiW4GzXA=="
+  url: "http://localhost:8086"
+  token: "OlhA_srdhvHbWpcjJvBnlU2DpG_pygcRwQdgdsDZY7VIPfb2dsHU02YktDE7Y9R_GMstzpUWA9046j-HjbhIFg=="
   org: "myorg"
   bucket: "mybucket"
