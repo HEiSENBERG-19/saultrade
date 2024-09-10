@@ -8,6 +8,7 @@ services:
       - INFLUXDB_DB=mydb
       - INFLUXDB_ADMIN_USER=admin
       - INFLUXDB_ADMIN_PASSWORD=admin123
+      - TZ=Asia/Kolkata
     volumes:
       - influxdb_data:/var/lib/influxdb
 
@@ -19,9 +20,37 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=password
+      - TZ=Asia/Kolkata
     volumes:
       - grafana_data:/var/lib/grafana
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    environment:
+      - TZ=Asia/Kolkata
+
+  saultrade_app:
+    build: .
+    container_name: saultrade_app
+    depends_on:
+      - redis
+      - influxdb
+    environment:
+      - CONFIG_FILE=/app/creds/config.yaml
+      - RULES_FILE=/app/creds/tbs_rules.yaml
+      - TZ=Asia/Kolkata
+    volumes:
+      - .:/app
+    command: >
+      sh -c "python -u simulation.py"
 
 volumes:
   influxdb_data:
   grafana_data:
+
+networks:
+  default:
+    name: saultrade_network

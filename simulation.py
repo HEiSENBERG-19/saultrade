@@ -1,7 +1,6 @@
 import redis.asyncio as aioredis
 import asyncio
 import os
-import subprocess
 from logger_setup import app_logger
 from position_manager import PositionManager
 from websocket_manager import WebSocketManager
@@ -19,7 +18,7 @@ class SimulationManager:
         self.config = config
         influxdb_config = self.config.get_influxdb_config()
         self.api = api
-        self.websocket_manager = WebSocketManager(api)
+        self.websocket_manager = WebSocketManager(api, config)
         self.market_data_processor = MarketDataProcessor(config)
         self.redis = None
         self.influxdb_manager = InfluxDBManager(
@@ -32,14 +31,28 @@ class SimulationManager:
         self.order_execution_engine = OrderExecutionEngine(self.market_data_processor, self.position_manager, config)
         self.margin_calculator = MarginCalculator(api, config.get_config('user'))
         self.strategy = Straddle(config, api, self.websocket_manager, self.market_data_processor, 
-                                 self.position_manager, self.order_execution_engine, self.margin_calculator)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+                                 self.position_manager, self.order_execution_engine, self.margin_calculator)
 
     async def setup(self):
         await self.websocket_manager.connect()
         await self.market_data_processor.connect()
         await self.order_execution_engine.connect()
         redis_config = self.config.get_redis_config()
-        self.redis = await aioredis.from_url(f"redis://{redis_config.get('host')}:{redis_config.get('port')}")
+        self.redis = await self.connect_to_redis(redis_config)
+
+    async def connect_to_redis(self, redis_config):
+        retries = 1
+        for i in range(retries):
+            try:
+                redis = await aioredis.from_url(f"redis://{redis_config.get('host')}:{redis_config.get('port')}")
+                app_logger.info("Connected to Redis.")
+                return redis
+            except aioredis.ConnectionError as e:
+                if i == retries - 1:
+                    app_logger.error(f"Failed to connect to Redis after {retries} retries: {e}")
+                    raise
+                app_logger.warning(f"Failed to connect to Redis. Retrying in 2 seconds... ({i + 1}/{retries})")
+                await asyncio.sleep(2)
 
     async def cleanup(self):
         self.influxdb_manager.close()
@@ -65,34 +78,15 @@ class SimulationManager:
 
         await self.strategy.execute(option_symbols, final_quantity, atm_strike)
 
+        while True:
+            await asyncio.sleep(1)
+            
         await self.cleanup()
 
-async def start_redis_server(redis_dir):
-    try:
-        os.chdir(redis_dir)
-        process = subprocess.Popen(['redis-server'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print("Redis server started.")
-    except Exception as e:
-        print(f"Failed to start Redis server: {e}")
-
-async def start_docker_compose():
-    try:
-        process = subprocess.Popen(['docker-compose', 'start'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print("Docker containers started.")
-    except Exception as e:
-        print(f"Failed to start Docker containers: {e}")
-
 async def main():
-    redis_dir = r'redis'
-    
-    await asyncio.gather(
-        start_redis_server(redis_dir),
-        start_docker_compose()
-    )
-
     load_dotenv()
-    config_file = os.environ.get('CONFIG_FILE', '/home/heisenberg/saultrade/creds/config.yaml')
-    rules_file = os.environ.get('RULES_FILE', '/home/heisenberg/saultrade/creds/tbs_rules.yaml')
+    config_file = os.environ.get('CONFIG_FILE', '/app/creds/config.yaml')
+    rules_file = os.environ.get('RULES_FILE', '/app/creds/tbs_rules.yaml')
     
     config = Config(config_file, rules_file)
     api = login(config)
