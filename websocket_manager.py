@@ -6,21 +6,23 @@ from queue import Queue
 from threading import Thread
 
 class WebSocketManager:
-    def __init__(self, api):
+    def __init__(self, api, config):
         self.api = api
+        self.config = config
         self.redis = None
         self.feed_opened = False
         self.message_queue = Queue()
         self.processing_task = None
 
     async def connect(self):
-        self.redis = await aioredis.from_url("redis://localhost")
+        redis_config = self.config.get_redis_config()
+        self.redis = await aioredis.from_url(f"redis://{redis_config.get('host')}:{redis_config.get('port')}")
         await self.start_websocket()
         self.processing_task = asyncio.create_task(self.process_queue())
 
     async def start_websocket(self):
         def run_websocket():
-                self.api.start_websocket(
+            self.api.start_websocket(
                 order_update_callback=self.sync_event_handler_order_update,
                 subscribe_callback=self.sync_event_handler_feed_update,
                 socket_open_callback=self.open_callback
