@@ -4,14 +4,19 @@ from datetime import datetime
 from logger_setup import app_logger
 
 class InfluxDBManager:
-    def __init__(self, url, token, org, bucket):
+    def __init__(self, url, token, org, bucket, send_data_to_influxdb):
         self.client = InfluxDBClient(url=url, token=token)
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
         self.query_api = self.client.query_api()
         self.bucket = bucket
         self.org = org
+        self.send_data_to_influxdb = send_data_to_influxdb
 
     def write_data(self, measurement, fields, tags=None):
+        if not self.send_data_to_influxdb:
+            app_logger.debug(f"InfluxDB data push is disabled. Skipping write for measurement: {measurement}")
+            return
+
         try:
             point = Point(measurement)
             for key, value in fields.items():

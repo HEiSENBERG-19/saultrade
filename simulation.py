@@ -12,6 +12,7 @@ from influxdb_manager import InfluxDBManager
 from margin_calculator import MarginCalculator
 from straddle import Straddle
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 class SimulationManager:
     def __init__(self, config, api):
@@ -25,7 +26,8 @@ class SimulationManager:
             url=influxdb_config.get('url'),
             token=influxdb_config.get('token'),
             org=influxdb_config.get('org'),
-            bucket=influxdb_config.get('bucket')
+            bucket=influxdb_config.get('bucket'),
+            send_data_to_influxdb=config.get_rule('send_data_to_influxdb')
         )
         self.position_manager = PositionManager(self.market_data_processor, self.influxdb_manager)
         self.order_execution_engine = OrderExecutionEngine(self.market_data_processor, self.position_manager, config)
@@ -76,11 +78,9 @@ class SimulationManager:
             await self.cleanup()
             return
 
-        await self.strategy.execute(option_symbols, final_quantity, atm_strike)
+        end_time = datetime.strptime(self.config.get_rule('end_time'), '%H:%M:%S').time()
+        await self.strategy.execute(option_symbols, final_quantity, atm_strike, end_time)
 
-        while True:
-            await asyncio.sleep(1)
-            
         await self.cleanup()
 
 async def main():
@@ -92,6 +92,20 @@ async def main():
     api = login(config)
     
     simulation = SimulationManager(config, api)
+    
+    # Get the start time from the rules file
+    start_time = datetime.strptime(config.get_rule('start_time'), '%H:%M:%S').time()
+    
+    # Calculate the delay until the start time
+    now = datetime.now().time()
+    if now < start_time:
+        delay = (datetime.combine(datetime.today(), start_time) - datetime.combine(datetime.today(), now)).total_seconds()
+    else:
+        delay = (datetime.combine(datetime.today() + timedelta(days=1), start_time) - datetime.combine(datetime.today(), now)).total_seconds()
+    
+    app_logger.info(f"Waiting for {delay} seconds until start time: {start_time}")
+    await asyncio.sleep(delay)
+    
     await simulation.run()
 
 if __name__ == "__main__":
