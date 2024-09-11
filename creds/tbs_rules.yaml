@@ -21,4 +21,4 @@ stop_loss_percentage: 30  # For 30% stop loss
 max_allowed_margin: 5000000
 
 # InfluxDB Configuration
-send_data_to_influxdb: true 
+send_data_to_influxdb: false 
