@@ -1,6 +1,7 @@
 # Timing
 login_time: '09:00:00'
-start_time: '09:15:00'
+start_time: '20:34:30'
+end_time: '20:35:30'
 
 # Underlying Asset
 tsymbol: 'CRUDEOIL'
@@ -18,3 +19,6 @@ bias_points: 0
 # Additional Strategy Parameters
 stop_loss_percentage: 30  # For 30% stop loss 
 max_allowed_margin: 5000000
+
+# InfluxDB Configuration
+send_data_to_influxdb: true 
