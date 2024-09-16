@@ -7,3 +7,4 @@ redis/*
 !redis/.gitkeep
 creds/config.yaml
 setup_influxdb.sh
+tester.ipynb

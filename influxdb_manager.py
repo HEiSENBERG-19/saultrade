@@ -18,21 +18,33 @@ class InfluxDBManager:
             return
 
         try:
-            point = Point(measurement)
-            for key, value in fields.items():
-                if isinstance(value, (int, float)):
-                    point = point.field(key, value)
-                else:
-                    point = point.tag(key, str(value))
-            if tags:
-                for key, value in tags.items():
-                    point = point.tag(key, str(value))
-            
-            point = point.time(datetime.utcnow(), WritePrecision.NS)
-            
+            point = self._create_point(measurement, fields, tags)
             self.write_api.write(bucket=self.bucket, org=self.org, record=point)
         except Exception as e:
             app_logger.error(f"Error writing to InfluxDB: {e}")
+
+    def write_points(self, points):
+        if not self.send_data_to_influxdb:
+            app_logger.debug(f"InfluxDB data push is disabled. Skipping write for multiple points.")
+            return
+
+        try:
+            influx_points = [self._create_point(**point) for point in points]
+            self.write_api.write(bucket=self.bucket, org=self.org, record=influx_points)
+        except Exception as e:
+            app_logger.error(f"Error writing multiple points to InfluxDB: {e}")
+
+    def _create_point(self, measurement, fields, tags=None):
+        point = Point(measurement)
+        for key, value in fields.items():
+            if isinstance(value, (int, float)):
+                point = point.field(key, value)
+            else:
+                point = point.tag(key, str(value))
+        if tags:
+            for key, value in tags.items():
+                point = point.tag(key, str(value))
+        return point.time(datetime.utcnow(), WritePrecision.NS)
 
     def query_data(self, measurement, start="-1h"):
         try:
@@ -42,7 +54,7 @@ class InfluxDBManager:
                 |> filter(fn: (r) => r._measurement == "{measurement}")
             '''
             result = self.query_api.query(org=self.org, query=query)
-            
+
             for table in result:
                 for record in table.records:
                     yield {
