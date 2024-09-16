@@ -22,8 +22,8 @@ class MarginCalculator:
                 margin = span + expo
                 trade_margin = span_trade + expo_trade
                 
-                final_margin = round(margin * 1.009, 2)
-                final_trade_margin = round(trade_margin * 1.009, 2)
+                final_margin = round(margin * 1.02999999, 2)
+                final_trade_margin = round(trade_margin * 1.02999999, 2)
                 app_logger.info(f"Required margin: {final_trade_margin}")
                 return final_margin, final_trade_margin
             else:

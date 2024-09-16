@@ -9,7 +9,8 @@ class PositionManager:
         self.total_current_value = 0
         self.influxdb_manager = influxdb_manager
         self.trade_margin = 0
-    
+        self.total_premium = 0
+
     def set_trade_margin(self, margin):
         self.trade_margin = margin
 
@@ -19,46 +20,51 @@ class PositionManager:
             'entry_price': price,
             'current_price': price
         }
-        self.total_entry_value += quantity * price
-        self.total_current_value += quantity * price
-        
-        self.influxdb_manager.write_data(
-            measurement="positions",
-            fields={"quantity": quantity, "price": price},
-            tags={"symbol": symbol, "action": "add"}
-        )
 
-    async def update_position(self, symbol, new_price):
-        if symbol in self.positions:
-            old_price = self.positions[symbol]['current_price']
-            quantity = self.positions[symbol]['quantity']
-            entry_price = self.positions[symbol]['entry_price']
-            self.positions[symbol]['current_price'] = new_price
-            self.total_current_value += quantity * (new_price - old_price)
-            
-            position_pnl = (entry_price - new_price) * quantity
-            await self.calculate_pnl()
-            
-            self.influxdb_manager.write_data(
-                measurement="positions",
-                fields={"price": new_price, "pnl": position_pnl},
-                tags={"symbol": symbol}
-            )
+        await self._update_influx()
+
+    async def _update_influx(self):
+        points = []
+
+        # 1. List of positions
+        for symbol, data in self.positions.items():
+            points.append({
+                "measurement": "positions",
+                "fields": {
+                    "symbol": symbol,
+                    "quantity": data['quantity'],
+                    "entry_price": data['entry_price'],
+                    "current_price": data['current_price']
+                }
+            })
+
+        # 2. ROI and 3. Total PNL
+        total_pnl = self.total_entry_value - self.total_current_value
+        roi = (total_pnl / self.trade_margin) * 100 if self.trade_margin != 0 else 0
+        points.append({
+            "measurement": "performance",
+            "fields": {
+                "total_pnl": total_pnl,
+                "roi": roi
+            }
+        })
+
+        # 3. Pricing of individual options
+        for symbol, data in self.positions.items():
+            points.append({
+                "measurement": "option_prices",
+                "fields": {
+                    "symbol": symbol,
+                    "price": data['current_price']
+                }
+            })
+
+        self.influxdb_manager.write_points(points)
 
     async def calculate_pnl(self):
-            total_pnl = self.total_entry_value - self.total_current_value
-            roi = 0
-            if self.total_entry_value != 0:
-                if self.trade_margin != 0:
-                    roi = (total_pnl / self.trade_margin) * 100
-                self.influxdb_manager.write_data(
-                    measurement="pnl",
-                    fields={
-                        "total_pnl": total_pnl, 
-                        "roi": roi,
-                    }
-                )
-            return total_pnl, roi
+        total_pnl = self.total_entry_value - self.total_current_value
+        roi = (total_pnl / self.trade_margin) * 100 if self.trade_margin != 0 else 0
+        return total_pnl, roi
 
     async def get_total_pnl(self):
         return await self.calculate_pnl()
@@ -66,8 +72,7 @@ class PositionManager:
     async def check_stop_loss(self, symbol, stop_loss_price):
         if symbol in self.positions:
             current_price = self.positions[symbol]['current_price']
-            if current_price >= stop_loss_price:
-                return True
+            return current_price >= stop_loss_price
         return False
 
     async def get_all_positions(self):
