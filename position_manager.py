@@ -9,8 +9,7 @@ class PositionManager:
         self.total_current_value = 0
         self.influxdb_manager = influxdb_manager
         self.trade_margin = 0
-        self.total_premium = 0
-
+    
     def set_trade_margin(self, margin):
         self.trade_margin = margin
 
@@ -20,50 +19,29 @@ class PositionManager:
             'entry_price': price,
             'current_price': price
         }
+        self.total_entry_value += quantity * price
+        self.total_current_value += quantity * price
+        
+        self._write_position_data(symbol, quantity, price, "add")
+        await self._write_pnl_data()
 
-        await self._update_influx()
-
-    async def _update_influx(self):
-        points = []
-
-        # 1. List of positions
-        for symbol, data in self.positions.items():
-            points.append({
-                "measurement": "positions",
-                "fields": {
-                    "symbol": symbol,
-                    "quantity": data['quantity'],
-                    "entry_price": data['entry_price'],
-                    "current_price": data['current_price']
-                }
-            })
-
-        # 2. ROI and 3. Total PNL
-        total_pnl = self.total_entry_value - self.total_current_value
-        roi = (total_pnl / self.trade_margin) * 100 if self.trade_margin != 0 else 0
-        points.append({
-            "measurement": "performance",
-            "fields": {
-                "total_pnl": total_pnl,
-                "roi": roi
-            }
-        })
-
-        # 3. Pricing of individual options
-        for symbol, data in self.positions.items():
-            points.append({
-                "measurement": "option_prices",
-                "fields": {
-                    "symbol": symbol,
-                    "price": data['current_price']
-                }
-            })
-
-        self.influxdb_manager.write_points(points)
+    async def update_position(self, symbol, new_price):
+        if symbol in self.positions:
+            old_price = self.positions[symbol]['current_price']
+            quantity = self.positions[symbol]['quantity']
+            entry_price = self.positions[symbol]['entry_price']
+            self.positions[symbol]['current_price'] = new_price
+            self.total_current_value += quantity * (new_price - old_price)
+            
+            position_pnl = (new_price - entry_price) * quantity
+            self._write_position_data(symbol, quantity, new_price, "update", position_pnl)
+            await self._write_pnl_data()
 
     async def calculate_pnl(self):
-        total_pnl = self.total_entry_value - self.total_current_value
-        roi = (total_pnl / self.trade_margin) * 100 if self.trade_margin != 0 else 0
+        total_pnl = self.total_current_value - self.total_entry_value
+        roi = 0
+        if self.total_entry_value != 0 and self.trade_margin != 0:
+            roi = (total_pnl / self.trade_margin) * 100
         return total_pnl, roi
 
     async def get_total_pnl(self):
@@ -77,3 +55,34 @@ class PositionManager:
 
     async def get_all_positions(self):
         return self.positions
+
+    def _write_position_data(self, symbol, quantity, price, action, pnl=None):
+        fields = {"quantity": quantity, "price": price}
+        if pnl is not None:
+            fields["pnl"] = pnl
+        
+        self.influxdb_manager.write_data(
+            measurement="positions",
+            fields=fields,
+            tags={"symbol": symbol, "action": action}
+        )
+
+    async def _write_pnl_data(self):
+        total_pnl, roi = await self.calculate_pnl()
+        self.influxdb_manager.write_data(
+            measurement="pnl",
+            fields={
+                "total_pnl": total_pnl, 
+                "roi": roi,
+                "total_entry_value": self.total_entry_value,
+                "total_current_value": self.total_current_value
+            }
+        )
+
+    async def _write_option_prices(self):
+        for symbol, data in self.positions.items():
+            self.influxdb_manager.write_data(
+                measurement="option_prices",
+                fields={"price": data['current_price']},
+                tags={"symbol": symbol}
+            )
