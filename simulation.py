@@ -1,6 +1,4 @@
-import redis.asyncio as aioredis
-import asyncio
-import os
+import redis.asyncio as aioredis, os, asyncio
 from logger_setup import app_logger
 from position_manager import PositionManager
 from websocket_manager import WebSocketManager
