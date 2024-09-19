@@ -1,6 +1,3 @@
-import asyncio
-from logger_setup import app_logger, pnl_logger
-
 class PositionManager:
     def __init__(self, market_data_processor, influxdb_manager):
         self.positions = {}
@@ -38,7 +35,7 @@ class PositionManager:
             await self._write_pnl_data()
 
     async def calculate_pnl(self):
-        total_pnl = self.total_current_value - self.total_entry_value
+        total_pnl = self.total_entry_value - self.total_current_value
         roi = 0
         if self.total_entry_value != 0 and self.trade_margin != 0:
             roi = (total_pnl / self.trade_margin) * 100

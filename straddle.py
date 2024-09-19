@@ -176,7 +176,7 @@ class Straddle:
             if symbol['TradingSymbol'] in self.position_manager.positions:
                 order = {
                     'symbol': symbol['TradingSymbol'],
-                    'direction': 'B',  # Buying to close the short position
+                    'direction': 'B',
                     'quantity': final_quantity,
                     'order_type': 'MKT'
                 }
