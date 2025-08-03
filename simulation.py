@@ -1,16 +1,15 @@
-import redis.asyncio as aioredis, os, asyncio
-from logger_setup import app_logger
-from position_manager import PositionManager
-from websocket_manager import WebSocketManager
-from market_data_processor import MarketDataProcessor
-from order_execution_engine import OrderExecutionEngine
-from config import Config
-from utils import login
-from influxdb_manager import InfluxDBManager
-from margin_calculator import MarginCalculator
-from straddle import Straddle
-from dotenv import load_dotenv
+import redis.asyncio as aioredis
+import asyncio
 from datetime import datetime, timedelta
+from utils.logger_setup import app_logger
+from utils.utils import login, get_config, get_rule, get_influxdb_config, get_redis_config
+from managers.position_manager import PositionManager
+from managers.websocket_manager import WebSocketManager
+from managers.market_data_processor import MarketDataProcessor
+from managers.order_execution_engine import OrderExecutionEngine
+from integrations.influxdb_manager import InfluxDBManager
+from managers.margin_calculator import MarginCalculator
+from strategies.straddle import Straddle
 
 class SimulationManager:
     def __init__(self, config, api):

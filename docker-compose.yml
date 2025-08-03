@@ -49,6 +49,7 @@ services:
       - CONFIG_FILE=/app/creds/config.yaml
       - RULES_FILE=/app/creds/tbs_rules.yaml
       - TZ=Asia/Kolkata
+      - PYTHONPATH=/app
     volumes:
       - .:/app
     command: >
