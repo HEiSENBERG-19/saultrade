@@ -9,7 +9,6 @@ from app.utils import login
 from app.influxdb_manager import InfluxDBManager
 from app.margin_calculator import MarginCalculator
 from app.strategies.straddle import Straddle
-from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
 class SimulationManager:
@@ -29,7 +28,7 @@ class SimulationManager:
         )
         self.position_manager = PositionManager(self.market_data_processor, self.influxdb_manager)
         self.order_execution_engine = OrderExecutionEngine(self.market_data_processor, self.position_manager, config)
-        self.margin_calculator = MarginCalculator(api, config.get_config('user'))
+        self.margin_calculator = MarginCalculator(api, config.get_user_credentials())
         self.strategy = Straddle(config, api, self.websocket_manager, self.market_data_processor, 
                                  self.position_manager, self.order_execution_engine, self.margin_calculator)
 
@@ -41,25 +40,21 @@ class SimulationManager:
         self.redis = await self.connect_to_redis(redis_config)
 
     async def connect_to_redis(self, redis_config):
-        retries = 1
-        for i in range(retries):
-            try:
-                redis = await aioredis.from_url(f"redis://{redis_config.get('host')}:{redis_config.get('port')}")
-                app_logger.info("Connected to Redis.")
-                return redis
-            except aioredis.ConnectionError as e:
-                if i == retries - 1:
-                    app_logger.error(f"Failed to connect to Redis after {retries} retries: {e}")
-                    raise
-                app_logger.warning(f"Failed to connect to Redis. Retrying in 2 seconds... ({i + 1}/{retries})")
-                await asyncio.sleep(2)
+        try:
+            redis = await aioredis.from_url(f"redis://{redis_config['host']}:{redis_config['port']}")
+            app_logger.info("Connected to Redis.")
+            return redis
+        except aioredis.ConnectionError as e:
+            app_logger.error(f"Failed to connect to Redis: {e}")
+            raise
 
     async def cleanup(self):
         self.influxdb_manager.close()
         await self.websocket_manager.close()
         await self.market_data_processor.close()
         await self.order_execution_engine.close()
-        await self.redis.aclose()
+        if self.redis:
+            await self.redis.aclose()
 
     async def run(self):
         app_logger.info("Starting simulation.")
@@ -82,19 +77,13 @@ class SimulationManager:
         await self.cleanup()
 
 async def main():
-    load_dotenv()
-    config_file = os.environ.get('CONFIG_FILE', '/app/creds/config.yaml')
     rules_file = os.environ.get('RULES_FILE', '/app/creds/tbs_rules.yaml')
-    
-    config = Config(config_file, rules_file)
+    config = Config(rules_file)
     api = login(config)
     
     simulation = SimulationManager(config, api)
     
-    # Get the start time from the rules file
     start_time = datetime.strptime(config.get_rule('start_time'), '%H:%M:%S').time()
-    
-    # Calculate the delay until the start time
     now = datetime.now().time()
     if now < start_time:
         delay = (datetime.combine(datetime.today(), start_time) - datetime.combine(datetime.today(), now)).total_seconds()

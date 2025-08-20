@@ -1,21 +1,17 @@
 services:
   influxdb:
-    image: influxdb:latest
+    image: influxdb:2.7
     container_name: influxdb
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_ADMIN_USER}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_ADMIN_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN}
+      - TZ=UTC
     ports:
       - "8086:8086"
-    environment:
-      - INFLUXDB_DB=mydb
-      - INFLUXDB_ADMIN_USER=admin
-      - INFLUXDB_ADMIN_PASSWORD=admin123
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=admin123
-      - DOCKER_INFLUXDB_INIT_ORG=myorg
-      - DOCKER_INFLUXDB_INIT_BUCKET=mybucket
-      - DOCKER_INFLUXDB_INIT_RETENTION=1w
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=myadmintoken
-      - TZ=Asia/Kolkata
     volumes:
       - influxdb_data:/var/lib/influxdb2
 
@@ -24,10 +20,8 @@ services:
     container_name: grafana
     ports:
       - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=password
-      - TZ=Asia/Kolkata
+    env_file:
+      - .env
     volumes:
       - grafana_data:/var/lib/grafana
 
@@ -36,8 +30,8 @@ services:
     container_name: redis
     ports:
       - "6379:6379"
-    environment:
-      - TZ=Asia/Kolkata
+    env_file:
+      - .env
 
   saultrade_app:
     build: .
@@ -45,10 +39,8 @@ services:
     depends_on:
       - redis
       - influxdb
-    environment:
-      - CONFIG_FILE=/app/creds/config.yaml
-      - RULES_FILE=/app/creds/tbs_rules.yaml
-      - TZ=Asia/Kolkata
+    env_file:
+      - .env
     volumes:
       - .:/app
     command: >

@@ -11,16 +11,17 @@ def login(config):
             NorenApi.__init__(self, host='https://api.shoonya.com/NorenWClientTP/', websocket='wss://api.shoonya.com/NorenWSTP/')
 
     api = ShoonyaApiPy()        
-    factor2 = pyotp.TOTP(config.get_config('secret')).now()
+    creds = config.get_user_credentials()
+    factor2 = pyotp.TOTP(creds["secret"]).now()
     
     try:
         ret = api.login(
-            userid=config.get_config('user'),
-            password=config.get_config('pwd'),
+            userid=creds["user"],
+            password=creds["pwd"],
             twoFA=factor2,
-            vendor_code=config.get_config('vc'),
-            api_secret=config.get_config('app_key'),
-            imei=config.get_config('imei')
+            vendor_code=creds["vc"],
+            api_secret=creds["app_key"],
+            imei=creds["imei"]
         )
         
         if ret and 'request_time' in ret:

@@ -1,6 +1,5 @@
 import redis.asyncio as aioredis
 from influxdb_client import InfluxDBClient
-from influxdb_client.client.write_api import SYNCHRONOUS
 from typing import Optional
 import logging
 
@@ -15,7 +14,9 @@ class DatabaseManager:
     async def connect_redis(self) -> aioredis.Redis:
         try:
             redis_config = self.config.get_redis_config()
-            self.redis = await aioredis.from_url(f"redis://{redis_config.get('host')}:{redis_config.get('port')}")
+            self.redis = await aioredis.from_url(
+                f"redis://{redis_config.get('host')}:{redis_config.get('port')}"
+            )
             return self.redis
         except Exception as e:
             logger.error(f"Failed to connect to Redis: {e}", exc_info=True)
@@ -37,7 +38,7 @@ class DatabaseManager:
     async def close(self):
         try:
             if self.redis:
-                await self.redis.close()
+                await self.redis.aclose()
             if self.influxdb:
                 self.influxdb.close()
         except Exception as e:
