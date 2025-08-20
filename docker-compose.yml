@@ -20,18 +20,30 @@ services:
     container_name: grafana
     ports:
       - "3000:3000"
-    env_file:
-      - .env
+    environment:
+      # These variables are used for login and are standard Grafana env vars
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      # These variables are passed for datasource provisioning
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
+      - INFLUXDB_ORG=${INFLUXDB_ORG}
+      - INFLUXDB_BUCKET=${INFLUXDB_BUCKET}
     volumes:
+      # Mounts the provisioning configurations into Grafana's default provisioning path
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+      # Mounts your dashboard JSON files to the path specified in dashboard.yml
+      - ./grafana/dashboards/:/var/lib/grafana/dashboards/
+      # Keeps Grafana data (like user settings, starred dashboards etc.) persistent
       - grafana_data:/var/lib/grafana
+    depends_on:
+      - influxdb
 
   redis:
     image: redis:latest
     container_name: redis
     ports:
       - "6379:6379"
-    env_file:
-      - .env
 
   saultrade_app:
     build: .

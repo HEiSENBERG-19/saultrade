@@ -1,0 +1,174 @@
+{
+  "id": null,
+  "uid": "saultrade-dashboard",
+  "title": "SaulTrade Dashboard",
+  "tags": ["trading", "influxdb", "pnl", "positions"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "5s",
+  "panels": [
+    {
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Total PnL",
+      "datasource": "InfluxDB",
+      "targets": [
+        {
+          "query": "from(bucket: \"mybucket\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"pnl\" and r._field == \"totalPnl\")",
+          "refId": "A"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "horizontal", "colorMode": "value" },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 }
+    },
+    {
+      "type": "stat",
+      "title": "ROI %",
+      "datasource": "InfluxDB",
+      "targets": [
+        {
+          "query": "from(bucket: \"mybucket\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"pnl\" and r._field == \"roi\")",
+          "refId": "A"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "fieldConfig": { "defaults": { "unit": "percent" } },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 }
+    },
+    {
+      "type": "stat",
+      "title": "Entry Value",
+      "datasource": "InfluxDB",
+      "targets": [
+        {
+          "query": "from(bucket: \"mybucket\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"pnl\" and r._field == \"totalEntryValue\")",
+          "refId": "A"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red" }, { "value": null, "color": "green" } ] } } },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 }
+    },
+    {
+      "type": "stat",
+      "title": "Current Value",
+      "datasource": "InfluxDB",
+      "targets": [
+        {
+          "query": "from(bucket: \"mybucket\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"pnl\" and r._field == \"totalCurrentValue\")",
+          "refId": "A"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red" }, { "value": null, "color": "green" } ] } } },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Total PnL Over Time",
+      "datasource": "InfluxDB",
+      "targets": [
+        {
+          "query": "from(bucket: \"mybucket\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"pnl\" and r._field == \"totalPnl\")",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } } },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 5 }
+    },
+    {
+      "type": "row",
+      "title": "Positions",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Positions - Price",
+      "datasource": "InfluxDB",
+      "targets": [
+        {
+          "query": "from(bucket: \"mybucket\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"positions\" and r._field == \"price\" and r.symbol == \"${symbol}\")",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 14 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Positions - Quantity",
+      "datasource": "InfluxDB",
+      "targets": [
+        {
+          "query": "from(bucket: \"mybucket\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"positions\" and r._field == \"quantity\" and r.symbol == \"${symbol}\")",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 14 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Positions - PnL",
+      "datasource": "InfluxDB",
+      "targets": [
+        {
+          "query": "from(bucket: \"mybucket\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"positions\" and r._field == \"pnl\" and r.symbol == \"${symbol}\")",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 21 }
+    },
+    {
+      "type": "row",
+      "title": "Risk / Insights",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 }
+    },
+    {
+      "type": "table",
+      "title": "Per-Symbol Latest Values",
+      "datasource": "InfluxDB",
+      "targets": [
+        {
+          "query": "from(bucket: \"mybucket\") |> range(start: -5m) |> filter(fn: (r) => r._measurement == \"positions\") |> last()",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 29 }
+    },
+    {
+      "type": "barchart",
+      "title": "PnL Contribution by Symbol",
+      "datasource": "InfluxDB",
+      "targets": [
+        {
+          "query": "from(bucket: \"mybucket\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"positions\" and r._field == \"pnl\") |> last()",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 29 }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "symbol",
+        "type": "query",
+        "datasource": "InfluxDB",
+        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"mybucket\", tag: \"symbol\")",
+        "refresh": 2,
+        "sort": 1,
+        "definition": "schema.tagValues(bucket: \"mybucket\", tag: \"symbol\")",
+        "multi": false,
+        "includeAll": false
+      }
+    ]
+  }
+}

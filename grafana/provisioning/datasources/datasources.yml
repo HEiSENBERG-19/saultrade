@@ -1,0 +1,29 @@
+# API version, currently 1
+apiVersion: 1
+
+# list of datasources to insert/update
+datasources:
+  # <string> name of the datasource. Required
+  - name: InfluxDB  # Important: This name must match the 'datasource' field in your saultrade.json panels
+    # <string> datasource type. Required
+    type: influxdb
+    # <string> access mode. proxy or direct (server or browser in the UI). Required
+    access: proxy
+    # <string> url
+    url: http://influxdb:8086
+    # <bool> enable basic auth
+    basicAuth: false
+    # <bool> mark as default datasource. Can be only one default
+    isDefault: true
+    # <map> fields that will be converted to json and stored in jsonData
+    jsonData:
+      version: Flux
+      organization: ${INFLUXDB_ORG}      # Using env var for organization
+      defaultBucket: ${INFLUXDB_BUCKET}  # Using env var for default bucket
+    # <map> fields that will be encrypted and stored in secureJsonData
+    secureJsonData:
+      token: ${INFLUXDB_TOKEN}          # Using env var for the token
+    # <int> Org ID. Default to 1
+    orgId: 1
+    # <bool> allow editing of this datasource from the UI
+    editable: true

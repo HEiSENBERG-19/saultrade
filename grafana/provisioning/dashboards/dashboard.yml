@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: 'saultrade-provider'  # A unique name for the provider
+    orgId: 1
+    folder: 'SaulTrade'          # Dashboards will be loaded into this folder in the Grafana UI
+    type: file
+    disableDeletion: false       # Allows you to delete dashboards from the UI
+    editable: true               # Allows you to edit dashboards from the UI
+    options:
+      # Path to the directory where the dashboard JSON files are located
+      path: /var/lib/grafana/dashboards
