@@ -1,7 +1,7 @@
 import asyncio
 from NorenRestApiPy.NorenApi import position
-from utils import get_account_limits  
-from logger_setup import app_logger
+from app.utils import get_account_limits  
+from app.logger_setup import app_logger
 
 class MarginCalculator:
     def __init__(self, api, account_id):

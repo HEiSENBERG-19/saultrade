@@ -1,15 +1,16 @@
-import redis.asyncio as aioredis
-import asyncio
+import redis.asyncio as aioredis, os, asyncio
+from app.logger_setup import app_logger
+from app.position_manager import PositionManager
+from app.websocket_manager import WebSocketManager
+from app.market_data_processor import MarketDataProcessor
+from app.order_execution_engine import OrderExecutionEngine
+from app.config import Config
+from app.utils import login
+from app.influxdb_manager import InfluxDBManager
+from app.margin_calculator import MarginCalculator
+from app.strategies.straddle import Straddle
+from dotenv import load_dotenv
 from datetime import datetime, timedelta
-from utils.logger_setup import app_logger
-from utils.utils import login, get_config, get_rule, get_influxdb_config, get_redis_config
-from managers.position_manager import PositionManager
-from managers.websocket_manager import WebSocketManager
-from managers.market_data_processor import MarketDataProcessor
-from managers.order_execution_engine import OrderExecutionEngine
-from integrations.influxdb_manager import InfluxDBManager
-from managers.margin_calculator import MarginCalculator
-from strategies.straddle import Straddle
 
 class SimulationManager:
     def __init__(self, config, api):
@@ -101,7 +102,7 @@ async def main():
         delay = (datetime.combine(datetime.today() + timedelta(days=1), start_time) - datetime.combine(datetime.today(), now)).total_seconds()
     
     app_logger.info(f"Waiting for {delay} seconds until start time: {start_time}")
-    await asyncio.sleep(delay)
+    # await asyncio.sleep(delay)
     
     await simulation.run()
 

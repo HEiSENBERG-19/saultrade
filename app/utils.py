@@ -1,7 +1,7 @@
 import logging, pyotp, pandas as pd, zipfile, requests, asyncio
 from io import BytesIO
 from NorenRestApiPy.NorenApi import NorenApi
-from logger_setup import app_logger
+from app.logger_setup import app_logger
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 import asyncio
 import redis.asyncio as aioredis
 import json
-from logger_setup import app_logger
+from app.logger_setup import app_logger
 
 class MarketDataProcessor:
     def __init__(self, config):

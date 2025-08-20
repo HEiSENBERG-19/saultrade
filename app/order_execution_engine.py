@@ -1,6 +1,6 @@
 import redis.asyncio as aioredis
 import json
-from logger_setup import app_logger
+from app.logger_setup import app_logger
 
 class OrderExecutionEngine:
     def __init__(self, market_data_processor, position_manager, config):

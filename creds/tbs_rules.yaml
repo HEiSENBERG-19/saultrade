@@ -1,11 +1,11 @@
 # Timing
 login_time: '09:00:00'
-start_time: '20:34:30'
-end_time: '20:35:30'
+start_time: '18:52:30'
+end_time: '23:59:30'
 
 # Underlying Asset
 tsymbol: 'CRUDEOIL'
-exchange: 'MCX'
+exchange: 'NFO'
 
 # Order Parameters
 quantity: 1  # Will be adjusted based on lot size
@@ -21,4 +21,4 @@ stop_loss_percentage: 30  # For 30% stop loss
 max_allowed_margin: 5000000
 
 # InfluxDB Configuration
-send_data_to_influxdb: false 
+send_data_to_influxdb: true 

@@ -1,7 +1,7 @@
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 from datetime import datetime
-from logger_setup import app_logger
+from app.logger_setup import app_logger
 
 class InfluxDBManager:
     def __init__(self, url, token, org, bucket, send_data_to_influxdb):
