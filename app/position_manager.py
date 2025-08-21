@@ -1,57 +1,93 @@
 class PositionManager:
     def __init__(self, market_data_processor, influxdb_manager):
-        self.positions = {}
+        self.positions = {}  # Stores open positions
         self.market_data_processor = market_data_processor
-        self.total_entry_value = 0
-        self.total_current_value = 0
         self.influxdb_manager = influxdb_manager
-        self.trade_margin = 0
-    
+        
+        # --- NEW: PnL State Management ---
+        self.realized_pnl = 0.0
+        self.unrealized_pnl = 0.0
+        self.trade_margin = 0.0
+
     def set_trade_margin(self, margin):
         self.trade_margin = margin
 
-    async def add_position(self, symbol, quantity, price):
-        self.positions[symbol] = {
-            'quantity': quantity,
-            'entry_price': price,
-            'current_price': price
-        }
-        self.total_entry_value += quantity * price
-        self.total_current_value += quantity * price
+    # --- REFACTORED: Now handles trade direction and averaging ---
+    async def add_position(self, symbol, quantity, price, direction):
+        signed_quantity = quantity if direction == 'B' else -quantity
         
-        self._write_position_data(symbol, quantity, price, "add")
-        await self._write_pnl_data()
-
-    async def update_position(self, symbol, new_price):
-        if symbol in self.positions:
-            old_price = self.positions[symbol]['current_price']
-            quantity = self.positions[symbol]['quantity']
-            entry_price = self.positions[symbol]['entry_price']
-            self.positions[symbol]['current_price'] = new_price
-            self.total_current_value += quantity * (new_price - old_price)
+        if symbol not in self.positions:
+            self.positions[symbol] = {
+                'quantity': signed_quantity,
+                'entry_price': price,
+                'current_price': price
+            }
+        else:
+            # Logic to average price if adding to an existing position
+            old_qty = self.positions[symbol]['quantity']
+            old_value = old_qty * self.positions[symbol]['entry_price']
+            new_value = signed_quantity * price
             
-            position_pnl = (new_price - entry_price) * quantity
-            self._write_position_data(symbol, quantity, new_price, "update", position_pnl)
-            await self._write_pnl_data()
+            total_qty = old_qty + signed_quantity
+            if total_qty == 0:
+                # This trade closes the position, handle as a close event
+                await self.close_position(symbol, price, abs(signed_quantity))
+                return
+            
+            self.positions[symbol]['entry_price'] = (old_value + new_value) / total_qty
+            self.positions[symbol]['quantity'] = total_qty
 
-    async def calculate_pnl(self):
-        total_pnl = self.total_entry_value - self.total_current_value
-        roi = 0
-        if self.total_entry_value != 0 and self.trade_margin != 0:
-            roi = (total_pnl / self.trade_margin) * 100
-        return total_pnl, roi
+        # Write data and recalculate PnL
+        self._write_position_data(symbol, self.positions[symbol]['quantity'], price, "add")
+        await self.update_and_write_all_pnl()
 
-    async def get_total_pnl(self):
-        return await self.calculate_pnl()
+    # --- NEW: Crucial method to handle closing positions ---
+    async def close_position(self, symbol, exit_price, quantity_to_close):
+        if symbol not in self.positions:
+            return
 
-    async def check_stop_loss(self, symbol, stop_loss_price):
+        pos = self.positions[symbol]
+        entry_price = pos['entry_price']
+        original_quantity = pos['quantity']
+
+        # Determine signed quantity being closed (opposite of original trade)
+        signed_qty_to_close = min(abs(original_quantity), quantity_to_close)
+        if original_quantity > 0: # Long position
+             signed_qty_to_close *= -1
+
+        trade_pnl = (exit_price - entry_price) * abs(signed_qty_to_close)
+        self.realized_pnl += trade_pnl
+        
+        # Reduce position size or remove completely
+        pos['quantity'] += signed_qty_to_close # This will be original_qty - quantity_to_close
+        
+        self._write_position_data(symbol, pos['quantity'], exit_price, "close", trade_pnl)
+
+        if pos['quantity'] == 0:
+            del self.positions[symbol]
+
+        await self.update_and_write_all_pnl()
+
+    # --- REFACTORED: Now only updates price and recalculates unrealized PnL ---
+    async def update_position_price(self, symbol, new_price):
         if symbol in self.positions:
-            current_price = self.positions[symbol]['current_price']
-            return current_price >= stop_loss_price
-        return False
+            self.positions[symbol]['current_price'] = new_price
+            await self.update_and_write_all_pnl()
+            
+    # --- NEW: Centralized PnL calculation and writing ---
+    async def update_and_write_all_pnl(self):
+        # 1. Calculate current unrealized PnL
+        current_unrealized_pnl = 0.0
+        for symbol, pos in self.positions.items():
+            position_pnl = (pos['current_price'] - pos['entry_price']) * pos['quantity']
+            current_unrealized_pnl += position_pnl
+            # Write individual position PnL
+            self._write_position_data(symbol, pos['quantity'], pos['current_price'], "update", position_pnl)
 
-    async def get_all_positions(self):
-        return self.positions
+        self.unrealized_pnl = current_unrealized_pnl
+
+        # 2. Write aggregated PnL data
+        await self._write_pnl_data()
 
     def _write_position_data(self, symbol, quantity, price, action, pnl=None):
         fields = {"quantity": quantity, "price": price}
@@ -65,21 +101,25 @@ class PositionManager:
         )
 
     async def _write_pnl_data(self):
-        total_pnl, roi = await self.calculate_pnl()
+        total_pnl = self.realized_pnl + self.unrealized_pnl
+        roi = (total_pnl / self.trade_margin) * 100 if self.trade_margin != 0 else 0
+        
+        # Calculate total values based on current state
+        total_entry_value = sum(p['entry_price'] * abs(p['quantity']) for p in self.positions.values())
+        total_current_value = sum(p['current_price'] * abs(p['quantity']) for p in self.positions.values())
+
         self.influxdb_manager.write_data(
             measurement="pnl",
             fields={
-                "total_pnl": total_pnl, 
+                "total_pnl": total_pnl,
+                "realized_pnl": self.realized_pnl,
+                "unrealized_pnl": self.unrealized_pnl,
                 "roi": roi,
-                "total_entry_value": self.total_entry_value,
-                "total_current_value": self.total_current_value
+                "trade_margin": self.trade_margin,
+                "total_entry_value": total_entry_value,
+                "total_current_value": total_current_value
             }
         )
-
-    async def _write_option_prices(self):
-        for symbol, data in self.positions.items():
-            self.influxdb_manager.write_data(
-                measurement="option_prices",
-                fields={"price": data['current_price']},
-                tags={"symbol": symbol}
-            )
+        
+    async def get_all_positions(self):
+        return self.positions

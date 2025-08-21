@@ -4,11 +4,11 @@ start_time: '18:52:30'
 end_time: '23:59:30'
 
 # Underlying Asset
-tsymbol: 'CRUDEOIL'
+tsymbol: 'NIFTY'
 exchange: 'NFO'
 
 # Order Parameters
-quantity: 1  # Will be adjusted based on lot size
+quantity: 10  # Will be adjusted based on lot size
 use_margin_based_quantity: false  # Set to false to use fixed quantity only
 
 # Option Selection Parameters

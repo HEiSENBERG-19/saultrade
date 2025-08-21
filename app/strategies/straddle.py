@@ -37,9 +37,10 @@ class Straddle:
 
         await self.monitor_positions_and_stop_loss(stop_loss_orders, option_symbols, final_quantity, end_time)
 
-        final_pnl, roi = await self.position_manager.calculate_pnl()
-        app_logger.info(f"Final P&L: Rs{final_pnl:.2f}")
-        app_logger.info(f"Final ROI: {roi:.2f}%")
+        # PnL calculation is now handled by PositionManager, we can query it if needed
+        # final_pnl, roi = await self.position_manager.calculate_pnl()
+        # app_logger.info(f"Final P&L: Rs{final_pnl:.2f}")
+        # app_logger.info(f"Final ROI: {roi:.2f}%")
 
         await self.unsubscribe_from_symbols(option_symbols)
 
@@ -102,13 +103,19 @@ class Straddle:
                 order_id = order_response['order_id']
                 executed_price = order_response['price']
                 
-                await self.position_manager.add_position(symbol['TradingSymbol'], final_quantity, executed_price)
+                # Tell the engine to confirm the execution, which updates the position manager
+                await self.order_execution_engine.confirm_execution(
+                    symbol=symbol['TradingSymbol'],
+                    quantity=final_quantity,
+                    price=executed_price,
+                    direction=order['direction']
+                )
+
                 initial_order_details.append({
                     'symbol': symbol['TradingSymbol'],
                     'order_id': order_id,
                     'executed_price': executed_price
                 })
-                pos_logger.info(f"Position opened for {symbol['TradingSymbol']} at {executed_price}")
         return initial_order_details
 
     async def place_stop_loss_orders(self, initial_order_details, final_quantity):
@@ -155,34 +162,49 @@ class Straddle:
 
                 current_price = await self.market_data_processor.get_ltp(symbol)
                 if current_price:
-                    await self.position_manager.update_position(symbol, current_price)
+                    await self.position_manager.update_position_price(symbol, current_price)
 
                     for sl_order in stop_loss_orders[:]:
                         if sl_order['symbol'] == symbol:
-                            if (position['quantity'] > 0 and current_price >= sl_order['sl_price']) or \
-                            (position['quantity'] < 0 and current_price <= sl_order['sl_price']):
+                            # Note: Position quantity is now negative for shorts
+                            if (position['quantity'] < 0 and current_price >= sl_order['sl_price']):
                                 app_logger.info(f"Stop loss triggered for {symbol} at {current_price}")
-                                is_executed = await self.order_execution_engine.execute_stop_loss(sl_order['sl_order_id'])
-                                if is_executed:
-                                    stop_loss_orders.remove(sl_order)
-                                    del self.position_manager.positions[symbol]
-                                    pos_logger.info(f"Position closed for {symbol} at {current_price}")
-                                    break
+
+                                # Tell the engine to confirm the close execution
+                                await self.order_execution_engine.confirm_execution(
+                                    symbol=symbol,
+                                    quantity=abs(position['quantity']),
+                                    price=current_price,
+                                    direction='CLOSE',
+                                    order_id_to_remove=sl_order['sl_order_id']
+                                )
+
+                                stop_loss_orders.remove(sl_order)
+                                break # Exit inner loop for this symbol as its position is closed
 
             await asyncio.sleep(1)
 
     async def close_all_positions(self, option_symbols, final_quantity):
-        for symbol in option_symbols.values():
-            if symbol['TradingSymbol'] in self.position_manager.positions:
+        # Make a copy of positions to iterate over, as the original dict will be modified
+        open_positions = dict(self.position_manager.positions)
+        for trading_symbol, position_details in open_positions.items():
+            # Find the corresponding symbol details from option_symbols
+            symbol_info = next((s for s in option_symbols.values() if s['TradingSymbol'] == trading_symbol), None)
+            if symbol_info:
                 order = {
-                    'symbol': symbol['TradingSymbol'],
-                    'direction': 'B',
-                    'quantity': final_quantity,
+                    'symbol': trading_symbol,
+                    'direction': 'B', # Always buying to close a short straddle
+                    'quantity': abs(position_details['quantity']),
                     'order_type': 'MKT'
                 }
                 order_response = await self.order_execution_engine.place_order(order)
                 if order_response:
                     executed_price = order_response['price']
-                    await self.position_manager.update_position(symbol['TradingSymbol'], executed_price)
-                    del self.position_manager.positions[symbol['TradingSymbol']]
-                    pos_logger.info(f"Position closed for {symbol['TradingSymbol']} at {executed_price}")
+                    
+                    # Tell the engine to confirm the close execution
+                    await self.order_execution_engine.confirm_execution(
+                        symbol=trading_symbol,
+                        quantity=abs(position_details['quantity']),
+                        price=executed_price,
+                        direction='CLOSE'
+                    )
