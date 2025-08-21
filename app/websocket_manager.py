@@ -6,21 +6,18 @@ from queue import Queue
 from threading import Thread
 
 class WebSocketManager:
-    def __init__(self, api, config):
+    def __init__(self, api, redis_client: aioredis.Redis):
         self.api = api
-        self.config = config
-        self.redis = None
+        self.redis = redis_client
         self.feed_opened = False
         self.message_queue = Queue()
         self.processing_task = None
 
     async def connect(self):
-        redis_config = self.config.get_redis_config()
-        self.redis = await aioredis.from_url(f"redis://{redis_config.get('host')}:{redis_config.get('port')}")
-        await self.start_websocket()
+        self.start_websocket_thread()
         self.processing_task = asyncio.create_task(self.process_queue())
 
-    async def start_websocket(self):
+    def start_websocket_thread(self):
         def run_websocket():
             self.api.start_websocket(
                 order_update_callback=self.sync_event_handler_order_update,
@@ -29,6 +26,7 @@ class WebSocketManager:
             )
 
         Thread(target=run_websocket, daemon=True).start()
+        ws_logger.info("WebSocket client thread started.")
 
     def sync_event_handler_feed_update(self, tick_data):
         self.message_queue.put(('feed_update', tick_data))
@@ -40,14 +38,16 @@ class WebSocketManager:
         while True:
             while not self.message_queue.empty():
                 message_type, data = self.message_queue.get()
-                if message_type == 'feed_update':
-                    await self.event_handler_feed_update(data)
-                elif message_type == 'order_update':
-                    await self.event_handler_order_update(data)
-            await asyncio.sleep(0.1)  # Small delay to prevent busy waiting
+                try:
+                    if message_type == 'feed_update':
+                        await self.event_handler_feed_update(data)
+                    elif message_type == 'order_update':
+                        await self.event_handler_order_update(data)
+                except Exception as e:
+                    app_logger.error(f"Error processing message from queue: {e}", exc_info=True)
+            await asyncio.sleep(0.01)  # Prevent busy-waiting
 
     async def event_handler_feed_update(self, tick_data):
-        # ws_logger.info(f"feed update: {tick_data}")
         await self.redis.publish('market_data', json.dumps(tick_data))
 
     async def event_handler_order_update(self, order):
@@ -75,4 +75,7 @@ class WebSocketManager:
     async def close(self):
         if self.processing_task:
             self.processing_task.cancel()
-        await self.redis.close()
+            try:
+                await self.processing_task
+            except asyncio.CancelledError:
+                ws_logger.info("WebSocket message processing task cancelled.")

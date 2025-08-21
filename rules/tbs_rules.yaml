@@ -4,7 +4,7 @@ start_time: '18:52:30'
 end_time: '23:59:30'
 
 # Underlying Asset
-tsymbol: 'NIFTY'
+tsymbol: 'CRUDEOIL'
 exchange: 'NFO'
 
 # Order Parameters
@@ -17,7 +17,7 @@ botm_points: 500
 bias_points: 0
 
 # Additional Strategy Parameters
-stop_loss_percentage: 30  # For 30% stop loss 
+stop_loss_percentage: 3  # For 30% stop loss 
 max_allowed_margin: 5000000
 
 # InfluxDB Configuration

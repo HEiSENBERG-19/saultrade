@@ -1,24 +1,28 @@
 {
   "id": null,
-  "uid": "saultrade-dashboard-v2",
-  "title": "SaulTrade Live Performance",
-  "tags": ["trading", "influxdb", "pnl", "positions"],
-  "timezone": "browser",
+  "uid": "saultrade-dashboard-professional-v2",
+  "title": "SaulTrade - Professional Trading Dashboard",
+  "tags": ["trading", "influxdb", "pnl", "positions", "professional"],
+  "timezone": "Asia/Kolkata",
   "schemaVersion": 38,
-  "version": 2,
+  "version": 4,
   "refresh": "5s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "templating": {
     "list": [
       {
         "current": {},
         "datasource": {
           "type": "influxdb",
-          "uid": "InfluxDB" 
+          "uid": "InfluxDB"
         },
         "definition": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"mybucket\", tag: \"symbol\")",
         "hide": 0,
-        "includeAll": false,
-        "multi": false,
+        "includeAll": true,
+        "multi": true,
         "name": "symbol",
         "options": [],
         "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"mybucket\", tag: \"symbol\")",
@@ -26,24 +30,49 @@
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
-        "type": "query"
+        "type": "query",
+        "allValue": "*"
       }
     ]
   },
   "panels": [
     {
       "type": "row",
-      "title": "Key Performance Indicators",
+      "title": "📊 Portfolio Performance Overview",
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
     },
     {
       "type": "stat",
-      "title": "Total PnL",
+      "title": "Total P&L",
       "datasource": "InfluxDB",
-      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 1 },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "colorMode": "value", "graphMode": "area" },
-      "pluginVersion": "10.1.1",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 1 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyINR",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#E02F44", "value": null },
+              { "color": "#FF9830", "value": -1000 },
+              { "color": "#FADE2A", "value": -100 },
+              { "color": "#73BF69", "value": 0 },
+              { "color": "#299C46", "value": 1000 }
+            ]
+          }
+        }
+      },
       "targets": [
         {
           "refId": "A",
@@ -53,11 +82,34 @@
     },
     {
       "type": "stat",
-      "title": "Return on Investment (ROI)",
+      "title": "ROI %",
       "datasource": "InfluxDB",
-      "gridPos": { "h": 4, "w": 4, "x": 5, "y": 1 },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
-      "fieldConfig": { "defaults": { "unit": "percent" } },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 1 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#E02F44", "value": null },
+              { "color": "#FF9830", "value": -10 },
+              { "color": "#FADE2A", "value": -2 },
+              { "color": "#73BF69", "value": 0 },
+              { "color": "#299C46", "value": 5 }
+            ]
+          }
+        }
+      },
       "targets": [
         {
           "refId": "A",
@@ -66,139 +118,701 @@
       ]
     },
     {
-        "type": "stat",
-        "title": "Active Symbols",
-        "datasource": "InfluxDB",
-        "gridPos": { "h": 4, "w": 5, "x": 9, "y": 1 },
-        "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "colorMode": "value", "graphMode": "none" },
-        "targets": [
+      "type": "stat",
+      "title": "Realized P&L",
+      "datasource": "InfluxDB",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 1 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyINR",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#E02F44", "value": null },
+              { "color": "#73BF69", "value": 0 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"pnl\" and r._field == \"realized_pnl\")\n  |> last()"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Unrealized P&L",
+      "datasource": "InfluxDB",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 1 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyINR",
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#E02F44", "value": null },
+              { "color": "#73BF69", "value": 0 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"pnl\" and r._field == \"unrealized_pnl\")\n  |> last()"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "📈 P&L Performance Trend",
+      "datasource": "InfluxDB",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 7 },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "pointSize": 5,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "unit": "currencyINR",
+          "decimals": 2
+        },
+        "overrides": [
           {
-            "refId": "A",
-            "query": "from(bucket: \"mybucket\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"positions\")\n  |> keep(columns: [\"symbol\"])\n  |> distinct(column: \"symbol\")\n  |> count()"
+            "matcher": { "id": "byName", "options": "Total P&L" },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "#E02F44", "value": null },
+                    { "color": "#73BF69", "value": 0 }
+                  ]
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Realized P&L" },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#1F60C4"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "solid"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Unrealized P&L" },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [10, 10]
+                }
+              }
+            ]
           }
         ]
       },
-    {
-      "type": "stat",
-      "title": "Total Entry Value",
-      "datasource": "InfluxDB",
-      "gridPos": { "h": 4, "w": 5, "x": 14, "y": 1 },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "area" },
-      "fieldConfig": { "defaults": { "unit": "short" } },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "calcs": ["lastNotNull", "min", "max"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      },
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"pnl\" and r._field == \"total_entry_value\")\n  |> last()"
+          "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"pnl\" and r._field == \"total_pnl\")\n  |> map(fn: (r) => ({ r with _field: \"Total P&L\" }))"
+        },
+        {
+          "refId": "B",
+          "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"pnl\" and r._field == \"realized_pnl\")\n  |> map(fn: (r) => ({ r with _field: \"Realized P&L\" }))"
+        },
+        {
+          "refId": "C",
+          "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"pnl\" and r._field == \"unrealized_pnl\")\n  |> map(fn: (r) => ({ r with _field: \"Unrealized P&L\" }))"
         }
       ]
     },
     {
       "type": "stat",
-      "title": "Total Current Value",
+      "title": "Active Positions",
       "datasource": "InfluxDB",
-      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 1 },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "area" },
-      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 7 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#1F60C4"
+          }
+        }
+      },
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"pnl\" and r._field == \"total_current_value\")\n  |> last()"
+          "query": "from(bucket: \"mybucket\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"positions\" and r._field == \"quantity\")\n  |> last()\n  |> filter(fn: (r) => r._value != 0)\n  |> keep(columns: [\"symbol\"])\n  |> distinct(column: \"symbol\")\n  |> count()"
         }
       ]
     },
     {
-      "type": "timeseries",
-      "title": "Total PnL Over Time",
+      "type": "stat",
+      "title": "Trade Margin",
       "datasource": "InfluxDB",
-      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 5 },
-      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": {"fillOpacity": 20, "lineWidth": 2} } },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 7 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyINR",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#8F3BB8"
+          }
+        }
+      },
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"pnl\" and r._field == \"total_pnl\")"
+          "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"pnl\" and r._field == \"trade_margin\")\n  |> last()"
+        }
+      ]
+    },
+    {
+      "type": "gauge",
+      "title": "ROI Gauge",
+      "datasource": "InfluxDB",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 11 },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "orientation": "auto",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": -50,
+          "max": 50,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#E02F44", "value": -50 },
+              { "color": "#FF9830", "value": -20 },
+              { "color": "#FADE2A", "value": -5 },
+              { "color": "#73BF69", "value": 0 },
+              { "color": "#299C46", "value": 10 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"pnl\" and r._field == \"roi\")\n  |> last()"
         }
       ]
     },
     {
       "type": "row",
-      "title": "Live Positions",
+      "title": "💼 Position Management",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 12 }
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 }
     },
     {
       "type": "table",
-      "title": "Active Positions Summary",
+      "title": "📋 Active Positions",
       "datasource": "InfluxDB",
-      "gridPos": { "h": 8, "w": 14, "x": 0, "y": 13 },
+      "gridPos": { "h": 10, "w": 18, "x": 0, "y": 16 },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "P&L"
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "transparent", "value": null }
+            ]
+          },
+          "custom": {
+            "align": "center"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "P&L" },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyINR"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "#E02F44", "value": null },
+                    { "color": "#73BF69", "value": 0 }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Price" },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyINR"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Quantity" },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "#E02F44", "value": null },
+                    { "color": "#1F60C4", "value": 0 }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Symbol" },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 250
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          }
+        ]
+      },
       "targets": [
         {
           "refId": "A",
-          "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"positions\")\n  |> filter(fn: (r) => r[\"_field\"] == \"price\" or r[\"_field\"] == \"quantity\" or r[\"_field\"] == \"pnl\")\n  |> last()\n  |> pivot(rowKey:[\"_time\", \"symbol\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> keep(columns: [\"symbol\", \"price\", \"quantity\", \"pnl\"])"
+          "query": "positions = from(bucket: \"mybucket\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"positions\")\n  |> last()\n  |> pivot(rowKey: [\"symbol\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r.quantity != 0)\n  |> map(fn: (r) => ({\n      Symbol: r.symbol,\n      Price: r.price,\n      Quantity: r.quantity,\n      \"P&L\": r.pnl\n    }))\n\npositions"
         }
-      ],
-      "fieldConfig": {
-        "defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 0}]}},
-        "overrides": [
-            {"matcher": {"id": "byName", "options": "pnl"}, "properties": [{"id": "unit", "value": "short"}]},
-            {"matcher": {"id": "byName", "options": "price"}, "properties": [{"id": "unit", "value": "short"}]},
-            {"matcher": {"id": "byName", "options": "quantity"}, "properties": [{"id": "unit", "value": "short"}]}
-        ]
-      }
+      ]
     },
     {
-        "type": "barchart",
-        "title": "Final PnL by Symbol",
-        "datasource": "InfluxDB",
-        "gridPos": { "h": 8, "w": 10, "x": 14, "y": 13 },
-        "targets": [
-          {
-            "refId": "A",
-            "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"positions\" and r._field == \"pnl\")\n  |> last()\n  |> group(columns: [\"symbol\"])"
+      "type": "piechart",
+      "title": "🥧 P&L Distribution",
+      "datasource": "InfluxDB",
+      "gridPos": { "h": 10, "w": 6, "x": 18, "y": 16 },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "pieType": "donut",
+        "tooltip": {
+          "mode": "single"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "values": ["value", "percent"]
+        },
+        "displayLabels": ["name", "value"]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyINR",
+          "decimals": 0,
+          "color": {
+            "mode": "palette-classic"
           }
-        ],
-        "options": {"orientation": "horizontal", "colorByField": "pnl"}
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"mybucket\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"positions\" and r._field == \"pnl\")\n  |> last()\n  |> filter(fn: (r) => r._value != 0)\n  |> group(columns: [\"symbol\"])\n  |> map(fn: (r) => ({ r with symbol: r.symbol, _value: r._value }))"
+        }
+      ]
     },
     {
       "type": "row",
-      "title": "Symbol Deep Dive",
+      "title": "📈 Trading Activity & Analysis",
       "collapsed": true,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 }
-    },
-    {
-      "type": "timeseries",
-      "title": "${symbol} - Price",
-      "datasource": "InfluxDB",
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 22 },
-      "targets": [
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
+      "panels": [
         {
-          "refId": "A",
-          "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"positions\" and r._field == \"price\" and r.symbol == \"${symbol}\")"
+          "type": "table",
+          "title": "📝 Recent Trading Activity",
+          "datasource": "InfluxDB",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 27 },
+          "options": {
+            "showHeader": true,
+            "sortBy": [
+              {
+                "desc": true,
+                "displayName": "Time"
+              }
+            ]
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "custom": {
+                "align": "center"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Action" },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "thresholds"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "color": "#1F60C4", "value": null },
+                        { "color": "#73BF69", "value": "add" },
+                        { "color": "#E02F44", "value": "close" }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Price" },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "currencyINR"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 2
+                  }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "P&L" },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "currencyINR"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 2
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "thresholds"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "color": "#E02F44", "value": null },
+                        { "color": "#73BF69", "value": 0 }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Time" },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "dateTimeAsIso"
+                  }
+                ]
+              }
+            ]
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"positions\" and (r.action == \"add\" or r.action == \"close\"))\n  |> pivot(rowKey: [\"_time\", \"symbol\", \"action\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 100)\n  |> map(fn: (r) => ({\n      Time: r._time,\n      Symbol: r.symbol,\n      Action: r.action,\n      Price: r.price,\n      Quantity: r.quantity,\n      \"P&L\": if exists r.pnl then r.pnl else 0.0\n    }))"
+            }
+          ]
         }
       ]
     },
     {
-      "type": "timeseries",
-      "title": "${symbol} - Quantity",
-      "datasource": "InfluxDB",
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 22 },
-      "targets": [
+      "type": "row",
+      "title": "🔍 Symbol Deep Dive (${symbol})",
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 },
+      "panels": [
         {
-          "refId": "A",
-          "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"positions\" and r._field == \"quantity\" and r.symbol == \"${symbol}\")"
-        }
-      ]
-    },
-    {
-      "type": "timeseries",
-      "title": "${symbol} - PnL",
-      "datasource": "InfluxDB",
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 22 },
-      "targets": [
+          "type": "timeseries",
+          "title": "${symbol} - Price Movement",
+          "datasource": "InfluxDB",
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 28 },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "fillOpacity": 10,
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "never"
+              },
+              "unit": "currencyINR",
+              "decimals": 2
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"positions\" and r._field == \"price\" and r.symbol =~ /${symbol}/)"
+            }
+          ]
+        },
         {
-          "refId": "A",
-          "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"positions\" and r._field == \"pnl\" and r.symbol == \"${symbol}\")"
+          "type": "timeseries",
+          "title": "${symbol} - Position Size",
+          "datasource": "InfluxDB",
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 28 },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "custom": {
+                "fillOpacity": 20,
+                "lineWidth": 3
+              },
+              "unit": "short",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "#E02F44", "value": null },
+                  { "color": "#1F60C4", "value": 0 }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"positions\" and r._field == \"quantity\" and r.symbol =~ /${symbol}/)"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "${symbol} - P&L Trajectory",
+          "datasource": "InfluxDB",
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 28 },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "custom": {
+                "fillOpacity": 25,
+                "lineWidth": 3
+              },
+              "unit": "currencyINR",
+              "decimals": 2,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "#E02F44", "value": null },
+                  { "color": "#73BF69", "value": 0 }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "query": "from(bucket: \"mybucket\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"positions\" and r._field == \"pnl\" and r.symbol =~ /${symbol}/)"
+            }
+          ]
         }
       ]
     }
-  ]
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  }
 }
